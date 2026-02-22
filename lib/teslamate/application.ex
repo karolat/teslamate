@@ -18,6 +18,7 @@ defmodule TeslaMate.Application do
 
   defp children do
     mqtt_config = Application.get_env(:teslamate, :mqtt)
+    ft_config = Application.get_env(:teslamate, :fleet_telemetry)
 
     case Application.get_env(:teslamate, :import_directory) do
       nil ->
@@ -32,6 +33,7 @@ defmodule TeslaMate.Application do
           TeslaMate.Terrain,
           TeslaMate.Vehicles,
           if(mqtt_config != nil, do: {TeslaMate.Mqtt, mqtt_config}),
+          if(ft_config != nil, do: {TeslaMate.FleetTelemetry.Consumer, ft_config}),
           TeslaMate.Repair
         ]
         |> Enum.reject(&is_nil/1)

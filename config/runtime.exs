@@ -177,6 +177,36 @@ if System.get_env("DISABLE_MQTT") != "true" or config_env() == :test do
     ipv6: System.get_env("MQTT_IPV6") == "true"
 end
 
+if System.get_env("FLEET_TELEMETRY_ENABLED") == "true" do
+  ft_mqtt_host =
+    System.get_env("FLEET_TELEMETRY_MQTT_HOST") ||
+      System.get_env("MQTT_HOST", "localhost")
+
+  ft_mqtt_port =
+    (System.get_env("FLEET_TELEMETRY_MQTT_PORT") ||
+       System.get_env("MQTT_PORT", "1883"))
+    |> String.to_integer()
+
+  config :teslamate, :fleet_telemetry,
+    topic_base: System.get_env("FLEET_TELEMETRY_TOPIC_BASE", "telemetry"),
+    debounce_ms:
+      System.get_env("FLEET_TELEMETRY_DEBOUNCE_MS", "250") |> String.to_integer(),
+    mqtt: [
+      host: ft_mqtt_host,
+      port: ft_mqtt_port,
+      username:
+        System.get_env("FLEET_TELEMETRY_MQTT_USERNAME") ||
+          System.get_env("MQTT_USERNAME"),
+      password:
+        System.get_env("FLEET_TELEMETRY_MQTT_PASSWORD") ||
+          System.get_env("MQTT_PASSWORD"),
+      tls: System.get_env("FLEET_TELEMETRY_MQTT_TLS", "false") == "true",
+      accept_invalid_certs:
+        System.get_env("FLEET_TELEMETRY_MQTT_TLS_ACCEPT_INVALID_CERTS", "false") == "true",
+      ipv6: System.get_env("FLEET_TELEMETRY_MQTT_IPV6", "false") == "true"
+    ]
+end
+
 if config_env() != :test do
   config :teslamate,
     import_directory: System.get_env("IMPORT_DIR", "import") |> Util.validate_import_dir()

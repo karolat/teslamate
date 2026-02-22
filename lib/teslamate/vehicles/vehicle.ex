@@ -299,6 +299,44 @@ defmodule TeslaMate.Vehicles.Vehicle do
     end
   end
 
+  ## Cast: Fleet Telemetry Update
+
+  def handle_event(:cast, {:fleet_telemetry_update, %Vehicle{} = vehicle}, _state, %Data{} = data) do
+    case vehicle do
+      # Discard if vehicle data is incomplete (no drive/charge/climate/vehicle state)
+      %Vehicle{drive_state: nil} ->
+        :keep_state_and_data
+
+      %Vehicle{charge_state: nil} ->
+        :keep_state_and_data
+
+      %Vehicle{climate_state: nil} ->
+        :keep_state_and_data
+
+      %Vehicle{vehicle_state: nil} ->
+        :keep_state_and_data
+
+      # Discard stale data (older timestamp than last response)
+      %Vehicle{drive_state: %Drive{timestamp: now}}
+      when is_number(now) and
+             is_map(data.last_response) and
+             is_map(data.last_response.drive_state) and
+             is_number(data.last_response.drive_state.timestamp) and
+             now < data.last_response.drive_state.timestamp ->
+        :keep_state_and_data
+
+      # Valid fleet telemetry data — feed into the existing update pipeline
+      %Vehicle{
+        drive_state: %Drive{},
+        charge_state: %Charge{},
+        climate_state: %Climate{},
+        vehicle_state: %VehicleState{}
+      } ->
+        {:keep_state, %Data{data | last_response: vehicle},
+         {:next_event, :internal, {:update, {:online, vehicle}}}}
+    end
+  end
+
   ## Info
 
   def handle_event(:info, {ref, fetch_result}, state, %Data{task: %Task{ref: ref}} = data)
